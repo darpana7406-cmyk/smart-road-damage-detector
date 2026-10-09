@@ -123,6 +123,7 @@ The original road-damage dataset contains multiple road-damage categories. For t
 1 → longitudinal_crack
 2 → transverse_crack
 3 → alligator_crack
+
 AI Model
 YOLOv8n
 The project uses YOLOv8n (YOLOv8 Nano) from Ultralytics.
@@ -132,6 +133,7 @@ YOLOv8n was selected because it provides a good balance between:
 - Inference speed
 - Model size
 - Real-time performance
+
 Model Specifications
 Parameter	Value
 Model	YOLOv8n
@@ -142,7 +144,6 @@ GPU	NVIDIA RTX 2050
 GPU Memory	4 GB
 CUDA	12.1
 Computer Vision	OpenCV
-
 
 System Architecture
 The overall workflow of the proposed system is:
@@ -276,10 +277,9 @@ Note: The gps.py, severity.py, measure.py, and report.py modules are included as
 
 Installation
 1. Clone the Repository
-git clone YOUR_REPO_URL
+git clone https://github.com/darpana7406-cmyk/smart-road-damage-detector.git
 cd PBEL
 
-Replace YOUR_REPO_URL with the URL of your GitHub repository.
 2. Create a Virtual Environment
 Windows
 python -m venv venv
@@ -296,25 +296,25 @@ Usage
 1. Train the Model
 To train YOLOv8n on the configured dataset:
 python src/train.py
-
 The training configuration is defined in the training script and data.yaml.
+
 2. Validate the Model
 Run validation and generate performance metrics:
 python src/validate.py
-
 This evaluates the model using metrics such as:
 - Precision
 - Recall
 - mAP@50
 - mAP@50-95
+
 3. Detect Damage in an Image
 Run inference on a single image:
 python src/detect.py path\to\image.jpg
 
 Example:
 python src/detect.py test_images/road.jpg
-
 The output displays detected road-damage classes along with their bounding boxes and confidence scores.
+
 4. Real-Time Webcam Detection
 To perform real-time detection using a webcam:
 python src/detect.py 0
@@ -338,6 +338,7 @@ The web interface can be extended to allow users to:
 - Show detected damage categories
 - Display confidence scores
 - Generate road-damage reports
+
 Hardware Used
 The system was developed and tested using:
 GPU
@@ -353,6 +354,7 @@ OpenCV
 Flask
 
 The use of YOLOv8n allows the system to operate without requiring high-end GPU hardware.
+
 Requirements
 The major software dependencies include:
 Python
@@ -379,17 +381,20 @@ venv/
 __pycache__/
 
 This keeps the GitHub repository lightweight and prevents trained model weights and generated outputs from unnecessarily increasing repository size.
+
 Future Scope
 The current system provides a foundation for a more comprehensive intelligent road-monitoring platform.
+
 1. Improved Model Accuracy
 Experiment with larger YOLO models such as:
 YOLOv8s
 YOLOv8m
-
 to potentially improve detection accuracy.
 The trade-off between model accuracy and inference speed can be studied for deployment.
+
 2. Class Imbalance Handling
 The pothole class has comparatively fewer training examples.
+
 Future work can investigate:
 - Oversampling
 - Data augmentation
@@ -398,6 +403,7 @@ Future work can investigate:
 - Focal loss
 - Hard-example mining
 to improve pothole recall.
+
 3. Night-Time Detection
 Performance can be improved for difficult environmental conditions such as:
 - Night-time roads
@@ -408,13 +414,14 @@ Performance can be improved for difficult environmental conditions such as:
 - Glare
 - Wet road surfaces
 Additional training data and image-enhancement techniques can be incorporated.
+
 4. Mobile Deployment
 The trained model can potentially be optimized for mobile devices using:
 TensorFlow Lite
 ONNX
 NCNN
-
 This could allow road-damage detection directly from an Android or iOS smartphone.
+
 5. GPS-Based Road Mapping
 GPS coordinates can be associated with each detected road defect.
 This can enable the development of a road-health map such as:
@@ -431,6 +438,7 @@ Severity
 Road Health Map
 
 Municipal authorities could use such a system to identify locations requiring maintenance.
+
 6. Damage Severity Estimation
 Future versions can estimate the severity of detected damage based on:
 - Bounding-box dimensions
@@ -466,6 +474,7 @@ A future version can combine computer vision with other sensors such as:
 - Vehicle-mounted sensors
 - Depth cameras
 This could improve pothole-depth estimation and overall road-condition assessment.
+
 9. Smart City Dashboard
 The complete system can eventually be extended into a cloud-based dashboard for municipal corporations.
 Possible features include:
@@ -503,7 +512,7 @@ YOLOv8 — Real-Time Object Detection
 https://github.com/ultralytics/ultralytics
 
 Acknowledgements
-We would like to acknowledge:
+I would like to acknowledge:
 - Arya et al. for the RDD2022 road-damage dataset.
 - Ultralytics for the YOLOv8 object-detection framework.
 - PyTorch for the deep-learning framework.
