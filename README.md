@@ -1,4 +1,4 @@
-# 🚧 Smart Road Damage Detector using Deep Learning
+# Smart Road Damage Detector using Deep Learning
 
 An AI-powered road damage detection and classification system that identifies **potholes and different types of road cracks** from dashboard, smartphone, or webcam images using **YOLOv8n**.
 
@@ -6,23 +6,16 @@ The system is designed as a **low-cost, real-time alternative to manual road ins
 
 ---
 
-## 👩‍💻 Project Information
+## Project Information
 
 | Details | Information |
 |---|---|
 | **Project Title** | Smart Road Damage Detector using Deep Learning |
 | **Author** | Darpana Shintre |
-| **Roll No.** | 1022411055 |
-| **Mentor** | Dr. Hrishikesh Vanjari |
-| **Institution** | DES Pune University |
-| **Program** | Third Year Electronics & Communication Engineering (AI-ML) |
-| **Division** | A |
-| **Project Type** | Final Mini Project |
-| **Submission Date** | 10 October 2026 |
 
 ---
 
-## 📌 Overview
+## Overview
 
 Road damage such as potholes and cracks is one of the major problems affecting road safety, vehicle maintenance, and transportation efficiency.
 
@@ -40,16 +33,16 @@ This project proposes a **computer-vision-based road damage detection system** u
 
 The system can process images captured using:
 
-- 📷 Smartphone cameras
-- 🚗 Vehicle dashboard cameras
-- 🎥 Webcams
-- 📹 Video streams
+- Smartphone cameras
+- Vehicle dashboard cameras
+- Webcams
+- Video streams
 
 The detected damage can then be used for automated road-condition assessment and future integration with GPS-based road-health mapping systems.
 
 ---
 
-# 🎯 Problem Statement
+# Problem Statement
 
 Manual inspection of roads is slow, expensive, and potentially dangerous for inspectors.
 
@@ -68,7 +61,7 @@ Therefore, there is a need for a **low-cost, camera-based system capable of dete
 
 ---
 
-# 🎯 Objectives
+# Objectives
 
 The primary objective of this project is to develop a deep-learning-based system capable of detecting and classifying road damage from camera images.
 
@@ -85,7 +78,7 @@ The primary objective of this project is to develop a deep-learning-based system
 
 ---
 
-# 🛣️ Damage Categories
+# Damage Categories
 
 The model detects four types of road damage:
 
@@ -98,7 +91,7 @@ The model detects four types of road damage:
 
 ---
 
-# 📊 Dataset
+# Dataset
 
 ## RDD2022 — Road Damage Dataset 2022
 
