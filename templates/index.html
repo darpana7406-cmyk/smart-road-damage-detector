@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Road Damage Detector</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Smart Road Damage Detector</h1>
+            <p class="subtitle">AI-powered road condition analysis using YOLOv8 + RDD2022</p>
+        </header>
+
+        <main>
+            <div class="card upload-card">
+                <h2>Upload Road Image</h2>
+                <form action="/upload" method="post" enctype="multipart/form-data" id="uploadForm">
+                    <div class="drop-zone" id="dropZone">
+                        <input type="file" name="image" id="fileInput" accept="image/jpeg,image/png" hidden>
+                        <div class="drop-content" id="dropContent">
+                            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="17 8 12 3 7 8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                            </svg>
+                            <p><strong>Click to browse</strong> or drag & drop</p>
+                            <p class="hint">JPG or PNG, up to 10 MB</p>
+                        </div>
+                        <img id="preview" class="preview" style="display:none;">
+                    </div>
+
+                    <div class="options">
+                        <label>
+                            <span>Latitude (optional)</span>
+                            <input type="number" step="any" name="lat" placeholder="e.g. 18.5204">
+                        </label>
+                        <label>
+                            <span>Longitude (optional)</span>
+                            <input type="number" step="any" name="lon" placeholder="e.g. 73.8567">
+                        </label>
+                    </div>
+
+                    <button type="submit" class="btn-primary" id="submitBtn" disabled>
+                        Analyze Image
+                    </button>
+                    <p class="hint centered" id="statusMsg">Select an image to begin</p>
+                </form>
+
+                <p class="hint centered" style="margin-top:20px;padding-top:16px;border-top:1px solid #334155;">
+                    <a href="/batch" style="color:#3b82f6;text-decoration:none;font-weight:600;">
+                        Analyze multiple images (batch mode) →
+                    </a>
+                </p>
+            </div>
+        </main>
+
+        <footer>
+            <p>PBEL 2026 · Model: YOLOv8n · mAP@0.5: 0.585</p>
+        </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

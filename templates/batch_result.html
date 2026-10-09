@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Batch Results — Smart Road Damage Detector</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <a href="/batch" class="back-link">← Back to batch upload</a>
+            <h1>Batch Analysis Results</h1>
+            <p class="subtitle">{{ summary.num_images }} images processed</p>
+        </header>
+
+        <main>
+            <section class="card">
+                <div class="severity-banner severity-{{ summary.overall_severity | lower }}">
+                    Overall Batch Severity: {{ summary.overall_severity }}
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat">
+                        <div class="stat-value">{{ summary.num_images }}</div>
+                        <div class="stat-label">Images</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value">{{ '%02d' % summary.total_potholes }}</div>
+                        <div class="stat-label">Potholes</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value">{{ '%02d' % summary.total_cracks }}</div>
+                        <div class="stat-label">Cracks</div>
+                    </div>
+                </div>
+
+                <div class="actions">
+                    <button type="button" class="btn-secondary" onclick="exportBatchCSV()">
+                        Download Combined CSV
+                    </button>
+                    <a href="/batch" class="btn-primary">New Batch</a>
+                </div>
+            </section>
+
+            <section class="card">
+                <h2>Combined Defect Map</h2>
+                <div id="batchMap" style="height: 320px; border-radius: 8px;"></div>
+            </section>
+
+            <section class="card">
+                <h2>Per-Image Results</h2>
+                <div class="batch-grid">
+                    {% for r in results %}
+                        {% if 'error' in r %}
+                            <div class="batch-item batch-error">
+                                <p class="batch-name">{{ r.original_name }}</p>
+                                <p class="batch-errmsg">Error: {{ r.error }}</p>
+                            </div>
+                        {% else %}
+                            <div class="batch-item">
+                                <img src="{{ url_for('serve_output_image', filename=r.annotated_image) }}"
+                                     alt="{{ r.original_name }}" class="batch-thumb">
+                                <div class="batch-info">
+                                    <p class="batch-name">{{ r.original_name }}</p>
+                                    <p class="batch-stats">
+                                        {{ r.potholes|length }} potholes · {{ r.cracks|length }} cracks
+                                    </p>
+                                    <span class="badge badge-{{ r.overall_severity | lower }}">
+                                        {{ r.overall_severity }}
+                                    </span>
+                                    {% if r.largest %}
+                                    <p class="batch-extra">
+                                        Max pothole: {{ r.largest.width_cm }} cm
+                                    </p>
+                                    {% endif %}
+                                    {% if r.cracks %}
+                                    <p class="batch-extra">
+                                        Crack density: {{ r.density_pct }}%
+                                    </p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>PBEL 2026 · Model: YOLOv8n · mAP@0.5: 0.585</p>
+        </footer>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        const RESULTS = {{ results | tojson }};
+        const GPS = {{ gps | tojson }};
+
+        const map = L.map('batchMap').setView([GPS.lat, GPS.lon], 14);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap', maxZoom: 19,
+        }).addTo(map);
+
+        RESULTS.forEach((r, i) => {
+            if (r.error) return;
+            const lat = r.gps.lat + (i * 0.0001);
+            const lon = r.gps.lon + (i * 0.0001);
+            const potholes = r.potholes.length;
+            const cracks = r.cracks.length;
+
+            const color = r.overall_severity === 'HIGH' ? '#ef4444' :
+                          r.overall_severity === 'MEDIUM' ? '#f59e0b' : '#22c55e';
+
+            const icon = L.divIcon({
+                className: 'batch-marker',
+                html: `<div style="background:${color};width:14px;height:14px;border-radius:50%;border:2px solid white;box-shadow:0 0 6px rgba(0,0,0,0.5)"></div>`,
+                iconSize: [14, 14],
+                iconAnchor: [7, 7],
+            });
+
+            L.marker([lat, lon], { icon })
+             .addTo(map)
+             .bindPopup(`<b>${r.original_name}</b><br>
+                         Potholes: ${potholes}<br>
+                         Cracks: ${cracks}<br>
+                         Severity: ${r.overall_severity}`);
+        });
+
+        function exportBatchCSV() {
+            const payload = RESULTS
+                .filter(r => !r.error)
+                .map(r => ({
+                    image_name: r.original_name,
+                    detections: r.detections,
+                }));
+            const d = encodeURIComponent(JSON.stringify(payload));
+            window.location.href = `/exports/batch-csv?d=${d}`;
+        }
+    </script>
+</body>
+</html>

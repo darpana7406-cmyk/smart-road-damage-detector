@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Road Condition Report</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <a href="/" class="back-link">← Back</a>
+            <h1>Road Condition Report</h1>
+        </header>
+
+        <main class="result-grid">
+            <!-- Left: Images -->
+            <section class="card">
+                <h2>Original</h2>
+                <img src="{{ url_for('serve_upload', filename=original) }}" alt="Original" class="result-img">
+
+                <h2 style="margin-top:24px;">Detected Defects</h2>
+                <img id="annotatedImage"
+                     src="{{ url_for('serve_output_image', filename=result.annotated_image) }}"
+                     alt="Annotated" class="result-img">
+            </section>
+
+            <!-- Right: Report -->
+            <section class="card">
+                <div class="severity-banner severity-{{ result.overall_severity | lower }}" id="severityBanner">
+                    Overall Severity: {{ result.overall_severity }}
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat">
+                        <div class="stat-value" id="statPotholes">{{ '%02d' % result.potholes|length }}</div>
+                        <div class="stat-label">Potholes</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value" id="statCracks">{{ '%02d' % result.cracks|length }}</div>
+                        <div class="stat-label">Cracks</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value" id="statTotal">{{ result.total_defects }}</div>
+                        <div class="stat-label">Total</div>
+                    </div>
+                </div>
+
+                {% if result.largest %}
+                <div class="detail-block" id="largestBlock">
+                    <h3>Largest Pothole</h3>
+                    <p><strong>Width:</strong> <span id="largestWidth">{{ result.largest.width_cm }}</span> cm</p>
+                    <p><strong>Area:</strong> <span id="largestArea">{{ result.largest.area_cm2 }}</span> cm²</p>
+                    <p><strong>Severity:</strong>
+                        <span class="badge badge-{{ result.largest.severity | lower }}" id="largestSeverity">
+                            {{ result.largest.severity }}
+                        </span>
+                    </p>
+                </div>
+                {% endif %}
+
+                {% if result.cracks %}
+                <div class="detail-block" id="crackBlock">
+                    <h3>Crack Metrics</h3>
+                    <p><strong>Total length:</strong> <span id="crackLength">{{ result.total_length_cm }}</span> cm</p>
+                    <p><strong>Crack density:</strong> <span id="crackDensity">{{ result.density_pct }}</span>%</p>
+                </div>
+                {% endif %}
+
+                <div class="detail-block">
+                    <h3>GPS Location</h3>
+                    <p>{{ "%.4f"|format(result.gps.lat|abs) }}° {{ 'N' if result.gps.lat >= 0 else 'S' }},
+                       {{ "%.4f"|format(result.gps.lon|abs) }}° {{ 'E' if result.gps.lon >= 0 else 'W' }}</p>
+                    <div id="map" style="height: 220px; border-radius: 8px; margin-top: 8px;"></div>
+                </div>
+
+                <div class="detail-block">
+                    <h3 id="detectionsHeader">Detections ({{ result.detections|length }})</h3>
+                    <ul class="detections-list" id="detectionsList">
+                    {% for d in result.detections %}
+                        <li>
+                            <span class="dot class-{{ d.class_id }}"></span>
+                            <span class="det-name">{{ d.class_name }}</span>
+                            <span class="det-conf">{{ "%.0f"|format(d.confidence * 100) }}%</span>
+                        </li>
+                    {% endfor %}
+                    </ul>
+                </div>
+
+                <!-- Export buttons -->
+                <div class="detail-block">
+                    <h3>Export</h3>
+                    <div class="actions">
+                        <button type="button" class="btn-secondary" onclick="exportCSV()">Download CSV</button>
+                        <button type="button" class="btn-secondary" onclick="exportPDF()">Download PDF</button>
+                    </div>
+                </div>
+
+                <!-- Annotations editor trigger -->
+                <div class="detail-block">
+                    <h3>Edit Annotations</h3>
+                    <p style="color:#94a3b8;font-size:0.85rem;margin-bottom:8px;">
+                        Correct mislabeled boxes or add missed defects, then re-analyze.
+                    </p>
+                    <button type="button" class="btn-primary" onclick="openEditor()">
+                        Open Annotation Editor
+                    </button>
+                </div>
+
+                <div class="actions">
+                    <a id="reportDownloadLink" href="{{ url_for('serve_report', filename=result.report_file) }}"
+                       class="btn-secondary" download>
+                        Download Report (.txt)
+                    </a>
+                    <a href="/" class="btn-primary">Analyze Another</a>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>PBEL 2026 · Model: YOLOv8n · mAP@0.5: 0.585</p>
+        </footer>
+    </div>
+
+    <!-- Annotation Editor Modal -->
+    <div id="editorModal" class="modal-overlay" style="display:none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Annotation Editor</h2>
+                <button class="modal-close" onclick="closeEditor()">×</button>
+            </div>
+
+            <div class="editor-toolbar">
+                <label>Class:</label>
+                <select id="classSelect">
+                    <option value="0">Longitudinal crack</option>
+                    <option value="1">Transverse crack</option>
+                    <option value="2">Alligator crack</option>
+                    <option value="3">Pothole</option>
+                </select>
+                <button class="btn-small" onclick="clearAll()">Clear All</button>
+                <span class="editor-hint">Drag on image to draw a box. Click a box to delete it.</span>
+            </div>
+
+            <div class="editor-canvas-wrap">
+                <canvas id="editorCanvas"></canvas>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeEditor()">Cancel</button>
+                <button class="btn-primary" id="reanalyzeBtn" onclick="saveAnnotations()">
+                    Re-Analyze with Edits
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Result object (mutable — updated after re-analysis)
+        let RESULT = {{ result | tojson }};
+        const ORIGINAL = "{{ original }}";
+
+        // ---------- Map ----------
+        const mapLat = RESULT.gps.lat;
+        const mapLon = RESULT.gps.lon;
+        const map = L.map('map').setView([mapLat, mapLon], 14);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap', maxZoom: 19,
+        }).addTo(map);
+        L.marker([mapLat, mapLon]).addTo(map).bindPopup('Defect location').openPopup();
+
+        // ---------- CSV EXPORT ----------
+        function exportCSV() {
+            const d = encodeURIComponent(JSON.stringify(RESULT.detections));
+            window.location.href = `/exports/csv/${RESULT.timestamp}?d=${d}`;
+        }
+
+        // ---------- PDF EXPORT ----------
+        function exportPDF() {
+            const d = encodeURIComponent(JSON.stringify(RESULT.detections));
+            const m = encodeURIComponent(JSON.stringify({
+                potholes: RESULT.potholes,
+                cracks: RESULT.cracks,
+                largest: RESULT.largest,
+                density_pct: RESULT.density_pct,
+                total_length_cm: RESULT.total_length_cm,
+                total_defects: RESULT.total_defects,
+                overall_severity: RESULT.overall_severity,
+                gps: RESULT.gps,
+                annotated_image: RESULT.annotated_image,
+            }));
+            window.location.href = `/exports/pdf/${RESULT.timestamp}?d=${d}&m=${m}`;
+        }
+
+        // ---------- ANNOTATION EDITOR ----------
+        const canvas = document.getElementById('editorCanvas');
+        const ctx = canvas.getContext('2d');
+        const img = new Image();
+        img.src = `/uploads/${ORIGINAL}`;
+
+        let boxes = [];
+        let drawing = false;
+        let startX = 0, startY = 0;
+        let scale = 1;
+
+        img.onload = () => {
+            const maxW = 900;
+            scale = Math.min(1, maxW / img.width);
+            canvas.width = img.width * scale;
+            canvas.height = img.height * scale;
+
+            // Load existing detections as starting boxes
+            boxes = RESULT.detections.map(d => ({
+                class_id: d.class_id,
+                bbox: d.bbox.map(v => v * scale),
+            }));
+
+            redraw();
+        };
+
+        function redraw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+            const palette = {
+                0: '#3b82f6', 1: '#8b5cf6', 2: '#ec4899', 3: '#f59e0b'
+            };
+            const labels = {
+                0: 'Longitudinal', 1: 'Transverse', 2: 'Alligator', 3: 'Pothole'
+            };
+
+            boxes.forEach((b) => {
+                const [x1, y1, x2, y2] = b.bbox;
+                const color = palette[b.class_id];
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2;
+                ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+                ctx.fillStyle = color;
+                ctx.fillRect(x1, Math.max(0, y1 - 16), 90, 16);
+                ctx.fillStyle = 'white';
+                ctx.font = '11px sans-serif';
+                ctx.fillText(labels[b.class_id], x1 + 4, Math.max(12, y1 - 4));
+            });
+        }
+
+        // Mouse events
+        canvas.addEventListener('mousedown', (e) => {
+            const r = canvas.getBoundingClientRect();
+            const mx = e.clientX - r.left;
+            const my = e.clientY - r.top;
+
+            // Check if clicking on existing box -> delete
+            const hit = boxes.findIndex(b =>
+                mx >= b.bbox[0] && mx <= b.bbox[2] &&
+                my >= b.bbox[1] && my <= b.bbox[3]
+            );
+            if (hit !== -1) {
+                boxes.splice(hit, 1);
+                redraw();
+                return;
+            }
+
+            drawing = true;
+            startX = mx;
+            startY = my;
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (!drawing) return;
+            const r = canvas.getBoundingClientRect();
+            const mx = e.clientX - r.left;
+            const my = e.clientY - r.top;
+            redraw();
+            ctx.strokeStyle = '#22c55e';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.strokeRect(startX, startY, mx - startX, my - startY);
+            ctx.setLineDash([]);
+        });
+
+        canvas.addEventListener('mouseup', (e) => {
+            if (!drawing) return;
+            drawing = false;
+            const r = canvas.getBoundingClientRect();
+            const mx = e.clientX - r.left;
+            const my = e.clientY - r.top;
+
+            const x1 = Math.min(startX, mx);
+            const y1 = Math.min(startY, my);
+            const x2 = Math.max(startX, mx);
+            const y2 = Math.max(startY, my);
+
+            if (x2 - x1 > 8 && y2 - y1 > 8) {
+                const cls = parseInt(document.getElementById('classSelect').value);
+                boxes.push({ class_id: cls, bbox: [x1, y1, x2, y2] });
+            }
+            redraw();
+        });
+
+        function openEditor() {
+            document.getElementById('editorModal').style.display = 'flex';
+            redraw();
+        }
+
+        function closeEditor() {
+            document.getElementById('editorModal').style.display = 'none';
+        }
+
+        function clearAll() {
+            boxes = [];
+            redraw();
+        }
+
+        // ---------- SAVE ANNOTATIONS (FIXED) ----------
+        function saveAnnotations() {
+            if (boxes.length === 0) {
+                alert('Please draw at least one box before re-analyzing.');
+                return;
+            }
+
+            // Scale boxes back to original image coordinates
+            const scaled = boxes.map(b => ({
+                class_id: b.class_id,
+                bbox: b.bbox.map(v => v / scale),
+            }));
+
+            console.log('[Editor] Sending detections:', scaled);
+            console.log('[Editor] Original file:', ORIGINAL);
+
+            const saveBtn = document.getElementById('reanalyzeBtn');
+            const originalText = saveBtn.textContent;
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Re-analyzing...';
+
+            fetch('/reanalyze', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    original: ORIGINAL,
+                    detections: scaled,
+                    lat: RESULT.gps.lat,
+                    lon: RESULT.gps.lon,
+                }),
+            })
+            .then(r => {
+                console.log('[Editor] HTTP status:', r.status);
+                if (!r.ok) throw new Error('Server returned ' + r.status);
+                return r.json();
+            })
+            .then(data => {
+                console.log('[Editor] Response:', data);
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                // Update RESULT in place
+                RESULT.annotated_image = data.annotated_image;
+                RESULT.report_file = data.report_file;
+                RESULT.potholes = data.potholes;
+                RESULT.cracks = data.cracks;
+                RESULT.largest = data.largest;
+                RESULT.density_pct = data.density_pct;
+                RESULT.total_length_cm = data.total_length_cm;
+                RESULT.overall_severity = data.overall_severity;
+                RESULT.total_defects = data.total_defects;
+                RESULT.detections = data.detections;
+                RESULT.timestamp = data.timestamp;
+
+                updateDOM();
+
+                saveBtn.disabled = false;
+                saveBtn.textContent = originalText;
+                closeEditor();
+                alert('Re-analyzed successfully!');
+            })
+            .catch(err => {
+                console.error('[Editor] Error:', err);
+                alert('Re-analysis failed: ' + err.message);
+                saveBtn.disabled = false;
+                saveBtn.textContent = originalText;
+            });
+        }
+
+        // ---------- UPDATE DOM AFTER RE-ANALYSIS ----------
+        function updateDOM() {
+            // Severity banner
+            const banner = document.getElementById('severityBanner');
+            banner.className = `severity-banner severity-${RESULT.overall_severity.toLowerCase()}`;
+            banner.textContent = `Overall Severity: ${RESULT.overall_severity}`;
+
+            // Stats
+            document.getElementById('statPotholes').textContent =
+                String(RESULT.potholes.length).padStart(2, '0');
+            document.getElementById('statCracks').textContent =
+                String(RESULT.cracks.length).padStart(2, '0');
+            document.getElementById('statTotal').textContent = RESULT.total_defects;
+
+            // Annotated image (with cache buster)
+            const annotatedImg = document.getElementById('annotatedImage');
+            annotatedImg.src = `/outputs/images/${RESULT.annotated_image}?t=${Date.now()}`;
+
+            // Largest pothole block
+            const largestBlock = document.getElementById('largestBlock');
+            if (RESULT.largest) {
+                if (!largestBlock) {
+                    // Create block if it didn't exist
+                    // (edge case: previous analysis had no potholes)
+                } else {
+                    document.getElementById('largestWidth').textContent = RESULT.largest.width_cm;
+                    document.getElementById('largestArea').textContent = RESULT.largest.area_cm2;
+                    const sevBadge = document.getElementById('largestSeverity');
+                    sevBadge.className = `badge badge-${RESULT.largest.severity.toLowerCase()}`;
+                    sevBadge.textContent = RESULT.largest.severity;
+                }
+            }
+
+            // Crack metrics block
+            if (RESULT.cracks && RESULT.cracks.length > 0) {
+                const crackBlock = document.getElementById('crackBlock');
+                if (crackBlock) {
+                    document.getElementById('crackLength').textContent = RESULT.total_length_cm;
+                    document.getElementById('crackDensity').textContent = RESULT.density_pct;
+                }
+            }
+
+            // Detections header + list
+            document.getElementById('detectionsHeader').textContent =
+                `Detections (${RESULT.detections.length})`;
+
+            const detList = document.getElementById('detectionsList');
+            detList.innerHTML = RESULT.detections.map(d => `
+                <li>
+                    <span class="dot class-${d.class_id}"></span>
+                    <span class="det-name">${d.class_name}</span>
+                    <span class="det-conf">${Math.round(d.confidence * 100)}%</span>
+                </li>
+            `).join('');
+
+            // Update report download link
+            const reportLink = document.getElementById('reportDownloadLink');
+            reportLink.href = `/outputs/reports/${RESULT.report_file}`;
+
+            // Reset editor boxes to match new detections
+            boxes = RESULT.detections.map(d => ({
+                class_id: d.class_id,
+                bbox: d.bbox.map(v => v * scale),
+            }));
+        }
+    </script>
+</body>
+</html>

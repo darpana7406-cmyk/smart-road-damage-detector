@@ -1,0 +1,16 @@
+ultralytics==8.3.0
+torch==2.4.1
+torchvision==0.19.1
+opencv-python==4.10.0.84
+numpy==1.26.4
+pillow==12.3.0
+tqdm==4.66.5
+pynmea2==1.19.0
+pyserial==3.5
+scikit-image==0.24.0
+matplotlib==3.9.2
+pyyaml==6.0.2
+pandas==2.2.3
+flask==3.0.3
+reportlab==4.2.5
+werkzeug==3.0.4

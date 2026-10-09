@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Batch Upload — Smart Road Damage Detector</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <a href="/" class="back-link">← Back to single upload</a>
+            <h1>Batch Road Image Analysis</h1>
+            <p class="subtitle">Upload 2–20 images to process at once</p>
+        </header>
+
+        <main>
+            <div class="card upload-card">
+                <h2>Upload Multiple Images</h2>
+                <form action="/batch-upload" method="post" enctype="multipart/form-data" id="batchForm">
+                    <div class="drop-zone" id="dropZone">
+                        <input type="file" name="images" id="fileInput"
+                               accept="image/jpeg,image/png" multiple hidden>
+                        <div class="drop-content" id="dropContent">
+                            <svg width="64" height="64" viewBox="0 0 24 24" fill="none"
+                                 stroke="currentColor" stroke-width="1.5">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="17 8 12 3 7 8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                            </svg>
+                            <p><strong>Click to browse</strong> or drag & drop multiple images</p>
+                            <p class="hint">JPG or PNG, up to 20 files, max 10 MB each</p>
+                        </div>
+                    </div>
+
+                    <div id="fileList" class="file-list"></div>
+
+                    <div class="options">
+                        <label>
+                            <span>Latitude (optional)</span>
+                            <input type="number" step="any" name="lat" placeholder="e.g. 18.5204">
+                        </label>
+                        <label>
+                            <span>Longitude (optional)</span>
+                            <input type="number" step="any" name="lon" placeholder="e.g. 73.8567">
+                        </label>
+                    </div>
+
+                    <button type="submit" class="btn-primary" id="submitBtn" disabled>
+                        Analyze All Images
+                    </button>
+                    <p class="hint centered" id="statusMsg">Select at least 2 images to begin</p>
+                </form>
+            </div>
+        </main>
+
+        <footer>
+            <p>PBEL 2026 · Model: YOLOv8n · mAP@0.5: 0.585</p>
+        </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='batch.js') }}"></script>
+</body>
+</html>
