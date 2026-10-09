@@ -278,7 +278,7 @@ Note: The gps.py, severity.py, measure.py, and report.py modules are included as
 Installation
 1. Clone the Repository
 git clone https://github.com/darpana7406-cmyk/smart-road-damage-detector.git
-cd PBEL
+cd smart-road-damage-detector
 
 2. Create a Virtual Environment
 Windows
